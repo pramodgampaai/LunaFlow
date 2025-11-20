@@ -36,7 +36,7 @@ const SettingsView: React.FC<SettingsViewProps> = ({
       </section>
       
       <div className="text-center text-xs text-slate-300 mt-8">
-        LunaFlow v1.0
+        Period Buddy v1.0
       </div>
     </div>
   );

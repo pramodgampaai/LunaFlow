@@ -15,7 +15,8 @@ import HistoryView from './components/HistoryView';
 import SettingsView from './components/SettingsView';
 import NavBar from './components/NavBar';
 
-const LOCAL_STORAGE_KEY = 'lunaflow_data_v1';
+const LOCAL_STORAGE_KEY = 'flora_data_v1';
+const OLD_LOCAL_STORAGE_KEY = 'lunaflow_data_v1';
 
 const initialData: AppData = {
   users: [],
@@ -86,6 +87,20 @@ const App: React.FC = () => {
       } catch (e) {
         console.error("Failed to parse local storage", e);
       }
+    } else {
+        // Attempt migration from old app name key
+        const oldSaved = localStorage.getItem(OLD_LOCAL_STORAGE_KEY);
+        if (oldSaved) {
+            try {
+                const parsed = JSON.parse(oldSaved);
+                const migrated = migrateData(parsed);
+                setData(migrated);
+                // We don't delete the old key immediately to be safe, 
+                // but the next save will write to the new key.
+            } catch (e) {
+                console.error("Failed to migrate old data", e);
+            }
+        }
     }
   }, []);
 
@@ -236,7 +251,7 @@ const App: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `lunaflow_backup_${new Date().toISOString().split('T')[0]}.json`;
+    link.download = `period_buddy_backup_${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -275,7 +290,7 @@ const App: React.FC = () => {
                 <div className="bg-rose-500 p-1.5 rounded-full">
                     <Droplets className="w-4 h-4 text-white" />
                 </div>
-                <h1 className="text-lg font-bold text-rose-900 tracking-tight">LunaFlow</h1>
+                <h1 className="text-lg font-bold text-rose-900 tracking-tight">Period Buddy</h1>
             </div>
         </div>
       </header>
@@ -324,7 +339,7 @@ const App: React.FC = () => {
                 <div className="w-16 h-16 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Users className="w-8 h-8" />
                 </div>
-                <h2 className="text-xl font-bold text-slate-800">Welcome to LunaFlow</h2>
+                <h2 className="text-xl font-bold text-slate-800">Welcome to Period Buddy</h2>
                 <p className="text-slate-500 mt-2 mb-6">Create your profile to start tracking.</p>
                 
                 <div className="max-w-xs mx-auto">
