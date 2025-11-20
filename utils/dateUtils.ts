@@ -7,7 +7,7 @@ export const getLocalTodayStr = (): string => {
 
 // Helper to construct a date object from YYYY-MM-DD string without timezone shift
 // (Treats the string as local midnight, but creates a Date object where we can trust getFullYear/Month/Date)
-const getDateFromStr = (dateStr: string): Date => {
+export const getDateFromStr = (dateStr: string): Date => {
   const parts = dateStr.split('-');
   // Note: Month is 0-indexed in JS Date
   return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
@@ -29,6 +29,23 @@ export const formatDayOfWeek = (dateStr: string): string => {
   return d.toLocaleDateString('en-US', {
     weekday: 'short',
   });
+};
+
+export const addDays = (dateStr: string, days: number): string => {
+  const d = getDateFromStr(dateStr);
+  d.setDate(d.getDate() + days);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+export const getDaysDifference = (date1Str: string, date2Str: string): number => {
+    const d1 = getDateFromStr(date1Str);
+    const d2 = getDateFromStr(date2Str);
+    const utc1 = Date.UTC(d1.getFullYear(), d1.getMonth(), d1.getDate());
+    const utc2 = Date.UTC(d2.getFullYear(), d2.getMonth(), d2.getDate());
+    return Math.floor((utc2 - utc1) / (1000 * 60 * 60 * 24));
 };
 
 export const getDurationInDays = (startStr: string, endStr?: string): number => {

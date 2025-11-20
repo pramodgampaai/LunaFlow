@@ -72,6 +72,7 @@ const App: React.FC = () => {
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [entryStartDate, setEntryStartDate] = useState('');
   const [entryEndDate, setEntryEndDate] = useState('');
+  const [dateError, setDateError] = useState<string | null>(null);
   const [entryDays, setEntryDays] = useState<Record<string, FlowIntensity>>({});
 
   // Load Data
@@ -150,6 +151,7 @@ const App: React.FC = () => {
       setEntryDays({});
       setEditingEntryId(null);
       setIsEntryModalOpen(false);
+      setDateError(null);
   };
 
   const handleEditEntry = (entry: CycleEntry) => {
@@ -164,13 +166,15 @@ const App: React.FC = () => {
       
       setEditingEntryId(entry.id);
       setIsEntryModalOpen(true);
+      setDateError(null);
   };
 
   const handleSaveEntry = () => {
     if (!entryStartDate || !data.activeUserId) return;
     
-    if (entryEndDate && new Date(entryEndDate) < new Date(entryStartDate)) {
-        alert("End date cannot be before start date.");
+    // Validate date range
+    if (entryEndDate && entryEndDate < entryStartDate) {
+        setDateError("End date cannot be before start date.");
         return;
     }
 
@@ -422,8 +426,17 @@ const App: React.FC = () => {
                             <input 
                                 type="date" 
                                 value={entryStartDate}
-                                onChange={(e) => setEntryStartDate(e.target.value)}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 text-sm"
+                                onChange={(e) => {
+                                    setEntryStartDate(e.target.value);
+                                    if (entryEndDate && e.target.value && e.target.value > entryEndDate) {
+                                        setDateError("Start date cannot be after end date");
+                                    } else {
+                                        setDateError(null);
+                                    }
+                                }}
+                                className={`w-full bg-slate-50 border rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-rose-500/20 text-sm ${
+                                    dateError ? 'border-red-300 focus:border-red-500' : 'border-slate-200 focus:border-rose-500'
+                                }`}
                             />
                         </div>
                         <div>
@@ -432,10 +445,26 @@ const App: React.FC = () => {
                                 type="date" 
                                 value={entryEndDate}
                                 min={entryStartDate}
-                                onChange={(e) => setEntryEndDate(e.target.value)}
-                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 text-sm"
+                                onChange={(e) => {
+                                    setEntryEndDate(e.target.value);
+                                    if (entryStartDate && e.target.value && e.target.value < entryStartDate) {
+                                        setDateError("End date cannot be before start date");
+                                    } else {
+                                        setDateError(null);
+                                    }
+                                }}
+                                className={`w-full bg-slate-50 border rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-rose-500/20 text-sm ${
+                                    dateError ? 'border-red-300 focus:border-red-500' : 'border-slate-200 focus:border-rose-500'
+                                }`}
                             />
                         </div>
+                        
+                        {dateError && (
+                            <div className="col-span-2 text-red-500 text-xs font-medium bg-red-50 p-2 rounded-lg flex items-center gap-1">
+                                <span className="block w-1 h-1 bg-red-500 rounded-full" />
+                                {dateError}
+                            </div>
+                        )}
                     </div>
 
                     {entryStartDate && (
@@ -466,7 +495,7 @@ const App: React.FC = () => {
                                         </div>
                                     </div>
                                 ))}
-                                {formDates.length === 0 && (
+                                {formDates.length === 0 && !dateError && (
                                     <p className="text-sm text-slate-400 text-center py-4">Select dates to see daily options.</p>
                                 )}
                                 {!entryEndDate && entryStartDate && formDates.length > 0 && (
