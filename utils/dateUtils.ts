@@ -1,8 +1,22 @@
 import { CycleEntry } from '../types';
 
+// Helper to get local "today" as YYYY-MM-DD string
+export const getLocalTodayStr = (): string => {
+  return new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD format
+};
+
+// Helper to construct a date object from YYYY-MM-DD string without timezone shift
+// (Treats the string as local midnight, but creates a Date object where we can trust getFullYear/Month/Date)
+const getDateFromStr = (dateStr: string): Date => {
+  const parts = dateStr.split('-');
+  // Note: Month is 0-indexed in JS Date
+  return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+};
+
 export const formatDate = (dateStr: string): string => {
   if (!dateStr) return '';
-  return new Date(dateStr).toLocaleDateString('en-US', {
+  const d = getDateFromStr(dateStr);
+  return d.toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -11,27 +25,46 @@ export const formatDate = (dateStr: string): string => {
 
 export const formatDayOfWeek = (dateStr: string): string => {
   if (!dateStr) return '';
-  return new Date(dateStr).toLocaleDateString('en-US', {
+  const d = getDateFromStr(dateStr);
+  return d.toLocaleDateString('en-US', {
     weekday: 'short',
   });
 };
 
-export const getDurationInDays = (start: string, end?: string): number => {
-  const startDate = new Date(start);
-  // If no end date, calculate duration until today (inclusive)
-  const endDate = end ? new Date(end) : new Date();
-  
-  // If start date is in the future relative to "today" (and no end date), duration is 1 (the start day)
-  if (!end && startDate > endDate) return 1;
+export const getDurationInDays = (startStr: string, endStr?: string): number => {
+  if (!startStr) return 0;
 
-  const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // Inclusive
+  // Convert strings to UTC timestamps for difference calculation
+  const start = new Date(startStr);
+  
+  let end: Date;
+  if (endStr) {
+    end = new Date(endStr);
+  } else {
+    // Default to local "Today" converted to YYYY-MM-DD
+    end = new Date(getLocalTodayStr());
+  }
+  
+  // Reset times to UTC midnight to avoid partial day diffs
+  const utcStart = Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate());
+  const utcEnd = Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate());
+
+  const diffTime = utcEnd - utcStart;
+  const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  // Return inclusive count (start date is Day 1)
+  // Max(1, ...) ensures we don't show negative or 0 if dates are wonky
+  return Math.max(1, days + 1);
 };
 
 export const getCycleLength = (currentStart: string, previousStart: string): number => {
   const current = new Date(currentStart);
   const prev = new Date(previousStart);
-  const diffTime = Math.abs(current.getTime() - prev.getTime());
+  
+  const utcCurrent = Date.UTC(current.getUTCFullYear(), current.getUTCMonth(), current.getUTCDate());
+  const utcPrev = Date.UTC(prev.getUTCFullYear(), prev.getUTCMonth(), prev.getUTCDate());
+  
+  const diffTime = Math.abs(utcCurrent - utcPrev);
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 };
 
@@ -42,35 +75,35 @@ export const sortEntries = (entries: CycleEntry[]): CycleEntry[] => {
 // Helper to generate dates between start and end (or today)
 export const getDatesInRange = (start: string, end?: string): string[] => {
   if (!start) return [];
-  const s = new Date(start);
   
-  let eDate: Date;
-  if (end) {
-    eDate = new Date(end);
-  } else {
-    // Default to local "Today" YYYY-MM-DD to match input[type=date] logic
-    // This ensures that if it is late at night, we don't accidentally jump to tomorrow (UTC)
-    const localYMD = new Date().toLocaleDateString('en-CA'); 
-    eDate = new Date(localYMD);
-  }
+  const targetEndStr = end || getLocalTodayStr();
   
-  // If start is strictly after end, just return start (1 day) to avoid crashes
-  if (s > eDate) {
-     return [start];
+  // Prevent loop if start is after end
+  if (new Date(start) > new Date(targetEndStr)) {
+      return [start];
   }
 
-  const dates = [];
-  const MAX_DAYS = 60; 
+  const dates: string[] = [];
+  const endDate = new Date(targetEndStr);
+  
+  // Use local date construction to iterate safely
+  const currentIterator = getDateFromStr(start); 
+  const finalDate = getDateFromStr(targetEndStr);
+  
   let safetyCount = 0;
+  const MAX_DAYS = 60;
 
-  // Clone to avoid modifying original date
-  const currentIterator = new Date(s);
-
-  while (currentIterator <= eDate && safetyCount < MAX_DAYS) {
-    dates.push(currentIterator.toISOString().split('T')[0]);
+  while (currentIterator <= finalDate && safetyCount < MAX_DAYS) {
+    // Convert back to YYYY-MM-DD string
+    const year = currentIterator.getFullYear();
+    const month = String(currentIterator.getMonth() + 1).padStart(2, '0');
+    const day = String(currentIterator.getDate()).padStart(2, '0');
+    dates.push(`${year}-${month}-${day}`);
+    
     currentIterator.setDate(currentIterator.getDate() + 1);
     safetyCount++;
   }
+  
   return dates;
 };
 
@@ -109,9 +142,14 @@ export const calculateStats = (entries: CycleEntry[]) => {
   let avgCycleLength = 0;
   if (sorted.length > 1) {
     // Time from first recorded period to last recorded period / (count - 1)
-    const firstStart = new Date(sorted[sorted.length - 1].startDate).getTime();
-    const lastStart = new Date(sorted[0].startDate).getTime();
-    const daysDiff = (lastStart - firstStart) / (1000 * 60 * 60 * 24);
+    // Use UTC timestamps for robust calc
+    const firstStart = new Date(sorted[sorted.length - 1].startDate);
+    const lastStart = new Date(sorted[0].startDate);
+    
+    const utcFirst = Date.UTC(firstStart.getUTCFullYear(), firstStart.getUTCMonth(), firstStart.getUTCDate());
+    const utcLast = Date.UTC(lastStart.getUTCFullYear(), lastStart.getUTCMonth(), lastStart.getUTCDate());
+    
+    const daysDiff = (utcLast - utcFirst) / (1000 * 60 * 60 * 24);
     avgCycleLength = Math.round(daysDiff / (sorted.length - 1));
   }
 

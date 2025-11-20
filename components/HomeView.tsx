@@ -19,8 +19,8 @@ const HomeView: React.FC<HomeViewProps> = ({ currentUser, stats, onLogPeriod, on
   if (!ongoingEntry && currentUser.entries.length > 0) {
     const latestEntry = [...currentUser.entries].sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0];
     if (latestEntry) {
-        const diff = Math.abs(new Date().getTime() - new Date(latestEntry.startDate).getTime());
-        cycleDay = Math.ceil(diff / (1000 * 60 * 60 * 24));
+        // Calculate days since the start of the last period (Day 1 of cycle)
+        cycleDay = getDurationInDays(latestEntry.startDate);
     }
   }
 
