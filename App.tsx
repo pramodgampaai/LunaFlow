@@ -4,7 +4,9 @@ import {
   X,
   Users,
   Check,
-  UserPlus
+  UserPlus,
+  Edit,
+  Trash2
 } from './components/ui/Icons';
 import { AppData, CycleEntry, UserProfile, DEFAULT_THEME_COLOR, DailyLog, FlowIntensity } from './types';
 import { formatDate, formatDayOfWeek, getDatesInRange, calculateStats } from './utils/dateUtils';
@@ -67,6 +69,8 @@ const App: React.FC = () => {
   // User Mgmt State
   const [isUserMgmtOpen, setIsUserMgmtOpen] = useState(false);
   const [newUserName, setNewUserName] = useState('');
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editNameValue, setEditNameValue] = useState('');
 
   // Entry Form State
   const [isEntryModalOpen, setIsEntryModalOpen] = useState(false);
@@ -107,6 +111,10 @@ const App: React.FC = () => {
   // Save Data
   useEffect(() => {
     if (data.users.length > 0) {
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+    } else if (data.version > 1) {
+        // If we have initialized but deleted all users, we should probably clear or save empty state
+        // Keep it simple: always save if we have ever initialized
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
     }
   }, [data]);
@@ -158,6 +166,46 @@ const App: React.FC = () => {
   const handleSwitchUser = (userId: string) => {
     setData(prev => ({ ...prev, activeUserId: userId }));
     setIsUserMgmtOpen(false);
+  };
+
+  const handleStartEditUser = (user: UserProfile) => {
+      setEditingUserId(user.id);
+      setEditNameValue(user.name);
+  };
+
+  const handleUpdateUser = () => {
+      if (!editingUserId || !editNameValue.trim()) return;
+      
+      setData(prev => ({
+          ...prev,
+          users: prev.users.map(u => u.id === editingUserId ? { ...u, name: editNameValue.trim() } : u)
+      }));
+      setEditingUserId(null);
+      setEditNameValue('');
+  };
+
+  const handleDeleteUser = (userId: string) => {
+      if (!confirm("Are you sure you want to delete this profile? All data will be lost.")) return;
+      
+      setData(prev => {
+          const newUsers = prev.users.filter(u => u.id !== userId);
+          let newActiveId = prev.activeUserId;
+          
+          // If we deleted the active user, switch to another one if available
+          if (prev.activeUserId === userId) {
+              newActiveId = newUsers.length > 0 ? newUsers[0].id : null;
+          }
+          
+          return {
+              ...prev,
+              users: newUsers,
+              activeUserId: newActiveId
+          };
+      });
+
+      if (editingUserId === userId) {
+          setEditingUserId(null);
+      }
   };
 
   const resetEntryForm = () => {
@@ -375,28 +423,76 @@ const App: React.FC = () => {
 
                 <div className="space-y-3 mb-5 max-h-60 overflow-y-auto">
                     {data.users.map(user => (
-                        <button 
+                        <div 
                             key={user.id}
-                            onClick={() => handleSwitchUser(user.id)}
-                            className={`w-full flex items-center gap-3 p-3 rounded-2xl transition-all border ${
+                            className={`w-full flex items-center gap-2 p-2 pl-3 rounded-2xl transition-all border ${
                                 user.id === data.activeUserId 
                                 ? 'bg-rose-50 border-rose-200 ring-1 ring-rose-200' 
                                 : 'bg-white border-slate-100 hover:bg-slate-50'
                             }`}
                         >
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shadow-sm ${
-                                user.id === data.activeUserId ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-500'
-                            }`}>
-                                {user.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="text-left flex-1">
-                                <div className={`font-medium ${user.id === data.activeUserId ? 'text-rose-900' : 'text-slate-700'}`}>
-                                    {user.name}
+                            {editingUserId === user.id ? (
+                                <div className="flex-1 flex items-center gap-2">
+                                     <input 
+                                        autoFocus
+                                        type="text"
+                                        value={editNameValue}
+                                        onChange={(e) => setEditNameValue(e.target.value)}
+                                        onKeyDown={(e) => { if(e.key === 'Enter') handleUpdateUser(); }}
+                                        className="flex-1 bg-white border border-rose-300 rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-rose-500/20"
+                                        placeholder="Enter name"
+                                     />
+                                     <button 
+                                        onClick={handleUpdateUser}
+                                        className="p-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors shadow-sm"
+                                     >
+                                        <Check className="w-4 h-4" />
+                                     </button>
+                                     <button 
+                                        onClick={() => setEditingUserId(null)}
+                                        className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                                     >
+                                        <X className="w-4 h-4" />
+                                     </button>
                                 </div>
-                                {user.id === data.activeUserId && <div className="text-xs text-rose-500 font-medium">Active</div>}
-                            </div>
-                            {user.id === data.activeUserId && <Check className="w-5 h-5 text-rose-500" />}
-                        </button>
+                            ) : (
+                                <>
+                                    <button 
+                                        onClick={() => handleSwitchUser(user.id)}
+                                        className="flex-1 flex items-center gap-3 text-left group"
+                                    >
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shadow-sm transition-colors ${
+                                            user.id === data.activeUserId ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200'
+                                        }`}>
+                                            {user.name.charAt(0).toUpperCase()}
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className={`font-medium ${user.id === data.activeUserId ? 'text-rose-900' : 'text-slate-700'}`}>
+                                                {user.name}
+                                            </div>
+                                            {user.id === data.activeUserId && <div className="text-xs text-rose-500 font-medium">Active</div>}
+                                        </div>
+                                    </button>
+                                    
+                                    <div className="flex items-center border-l border-slate-100 pl-2 ml-2 gap-1">
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); handleStartEditUser(user); }}
+                                            className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                                            title="Rename"
+                                        >
+                                            <Edit className="w-4 h-4" />
+                                        </button>
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); handleDeleteUser(user.id); }}
+                                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                            title="Delete Profile"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
                     ))}
                 </div>
 
