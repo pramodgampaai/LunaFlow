@@ -251,7 +251,7 @@ const App: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `period_buddy_backup_${new Date().toISOString().split('T')[0]}.json`;
+    link.download = `period_companion_backup_${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -290,7 +290,7 @@ const App: React.FC = () => {
                 <div className="bg-rose-500 p-1.5 rounded-full">
                     <Droplets className="w-4 h-4 text-white" />
                 </div>
-                <h1 className="text-lg font-bold text-rose-900 tracking-tight">Period Buddy</h1>
+                <h1 className="text-lg font-bold text-rose-900 tracking-tight">Period Companion</h1>
             </div>
         </div>
       </header>
@@ -339,7 +339,7 @@ const App: React.FC = () => {
                 <div className="w-16 h-16 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Users className="w-8 h-8" />
                 </div>
-                <h2 className="text-xl font-bold text-slate-800">Welcome to Period Buddy</h2>
+                <h2 className="text-xl font-bold text-slate-800">Welcome to Period Companion</h2>
                 <p className="text-slate-500 mt-2 mb-6">Create your profile to start tracking.</p>
                 
                 <div className="max-w-xs mx-auto">
