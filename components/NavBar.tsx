@@ -1,9 +1,9 @@
 import React from 'react';
-import { Home, Calendar, Settings } from './ui/Icons';
+import { Home, Calendar, Settings, Info } from './ui/Icons';
 
 interface NavBarProps {
-  currentView: 'home' | 'history' | 'settings';
-  onChangeView: (view: 'home' | 'history' | 'settings') => void;
+  currentView: 'home' | 'history' | 'settings' | 'about';
+  onChangeView: (view: 'home' | 'history' | 'settings' | 'about') => void;
 }
 
 const NavBar: React.FC<NavBarProps> = ({ currentView, onChangeView }) => {
@@ -38,6 +38,16 @@ const NavBar: React.FC<NavBarProps> = ({ currentView, onChangeView }) => {
         >
           <Settings className="w-6 h-6" />
           <span className="text-[10px] font-medium">Settings</span>
+        </button>
+
+        <button
+          onClick={() => onChangeView('about')}
+          className={`flex flex-col items-center gap-1 transition-colors ${
+            currentView === 'about' ? 'text-rose-500' : 'text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          <Info className="w-6 h-6" />
+          <span className="text-[10px] font-medium">About</span>
         </button>
       </div>
     </div>

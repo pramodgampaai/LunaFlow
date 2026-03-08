@@ -14,7 +14,8 @@ import {
   X,
   Edit2,
   Home,
-  Check
+  Check,
+  Info
 } from 'lucide-react';
 
 export {
@@ -33,5 +34,6 @@ export {
   X,
   Edit2 as Edit,
   Home,
-  Check
+  Check,
+  Info
 };

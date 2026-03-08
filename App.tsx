@@ -15,6 +15,7 @@ import { formatDate, formatDayOfWeek, getDatesInRange, calculateStats } from './
 import HomeView from './components/HomeView';
 import HistoryView from './components/HistoryView';
 import SettingsView from './components/SettingsView';
+import AboutView from './components/AboutView';
 import NavBar from './components/NavBar';
 
 const LOCAL_STORAGE_KEY = 'flora_data_v1';
@@ -60,7 +61,7 @@ const migrateData = (data: any): AppData => {
     };
 };
 
-type ViewState = 'home' | 'history' | 'settings';
+type ViewState = 'home' | 'history' | 'settings' | 'about';
 
 const App: React.FC = () => {
   const [data, setData] = useState<AppData>(initialData);
@@ -377,6 +378,10 @@ const App: React.FC = () => {
                         onExport={handleExport}
                         onImport={handleImport}
                     />
+                )}
+
+                {currentView === 'about' && (
+                    <AboutView />
                 )}
                 
                 <NavBar currentView={currentView} onChangeView={setCurrentView} />
